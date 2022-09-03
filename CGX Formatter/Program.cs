@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CGX_Formatter
@@ -15,7 +16,7 @@ namespace CGX_Formatter
     {
         public IEnumerable<Token> GetTokens(string source)
         {
-            Regex regex = new Regex(@"(?<assignment>=)|(?<separator>;)|(?<null>null)|(?<boolean>false|true)|(?<lp>\()|(?<rp>\))|(?<number>-?\d+)|(?<str>'[\w \(\)=;]+')");
+            Regex regex = new Regex(@"(?<assignment>=)|(?<separator>;)|(?<null>null)|(?<boolean>false|true)|(?<lp>\()|(?<rp>\))|(?<number>-?\d+)|(?<str>'[\w \(\)=;\t]+')");
             List<Token> tmp = new List<Token>();
             foreach (Match m in regex.Matches(source))
             {
@@ -72,6 +73,10 @@ namespace CGX_Formatter
         {
             bool result = false;
             _currentTokenContent = null;
+            if (_position >= _tokens.Count )
+            {
+                return false;
+            }
             if (_tokens[_position].TypeName == s)
             {
                 _currentTokenContent = _tokens[_position].Content;
@@ -88,31 +93,83 @@ namespace CGX_Formatter
     {
         public string ToString(int offset);
     }
+    public class Starter : IElementCGX
+    {
+        IElementCGX _element;
+        public Starter(IElementCGX element)
+        {
+            _element = element;
+        }
+        public string ToString(int offset)
+        {
+            return _element.ToString(0).Substring(1);
+        }
+    }
 
     public class Block : IElementCGX
     {
         IEnumerable<IElementCGX> _elements;
         public Block(IEnumerable<IElementCGX> elements)
         {
-            _elements= elements;
+            _elements = elements;
         }
         public string ToString(int offset)
         {
-            throw new NotImplementedException();
+            List<IElementCGX> elmts = _elements?.ToList() ?? new List<IElementCGX>();
+            StringBuilder paddingSpace = new StringBuilder(); ;
+            for (int i = 0; i < offset; i++)
+            {
+                paddingSpace.Append(' ');
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.Append("\n" + paddingSpace + "(");
+            for (int i = 0; i < elmts.Count; i++)
+            {
+                if (i < elmts.Count - 1)
+                {
+                    sb.Append(elmts[i].ToString(offset + 4) + ";");
+                }
+                else
+                {
+                    sb.Append(elmts[i].ToString(offset + 4));
+                }
+            }
+            sb.Append("\n" + paddingSpace + ")");
+            return sb.ToString();
         }
     }
     public class PrimitiveType : IElementCGX
     {
-        Token _token;
-        public PrimitiveType(Token token)
+        string _content;
+
+        public PrimitiveType(string content)
         {
-            _token = token;
+            _content = content;
         }
         public string ToString(int offset)
         {
-            return _token.Content;
+            StringBuilder paddingSpace = new StringBuilder(); ;
+            for (int i = 0; i < offset; i++)
+            {
+                paddingSpace.Append(' ');
+            }
+            return "\n" + paddingSpace + _content;
         }
     }
+
+    public class KeyValuePrimitiveType : IElementCGX
+    {
+        string _content;
+        public KeyValuePrimitiveType(string content)
+        {
+            _content = content.Replace("\n", "");
+        }
+        public string ToString(int offset)
+        {
+            return _content;
+        }
+    }
+
     public class KeyValue : IElementCGX
     {
         IElementCGX _name;
@@ -125,7 +182,12 @@ namespace CGX_Formatter
         }
         public string ToString(int offset)
         {
-            return _name.ToString(offset) + "=" + _value.ToString(offset);
+            StringBuilder paddingSpace = new StringBuilder(); ;
+            for (int i = 0; i < offset; i++)
+            {
+                paddingSpace.Append(' ');
+            }
+            return  _name.ToString(offset) + "=" + _value.ToString(offset);
         }
     }
 
@@ -140,15 +202,16 @@ namespace CGX_Formatter
         // PRIMITIVE_TYPE -> NUMBER | BOOLEAN | STRING | NULL
         // KEY_VALUE -> STRING = BLOCK | STRING = PRIMITIVE_TYPE
 
-        public bool Parse(string source)
+        public IElementCGX Parse(string source)
         {
             try
             {
                 Tokenizer tokenizer = new Tokenizer();
                 var tokens = tokenizer.GetTokens(source);
                 TokenIndexer tokenIndexer = new TokenIndexer(tokens);
-                bool result = START(tokenIndexer);
-                return result;
+                IElementCGX element = null;
+                bool result = START(tokenIndexer, out element);
+                return element;
             }
             catch (Exception ex)
             {
@@ -156,11 +219,14 @@ namespace CGX_Formatter
             }
         }
 
-        public bool START(TokenIndexer indexer)
+        public bool START(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
+            IElementCGX content;
             indexer.SavePosition();
-            if (ELEMENT(indexer))
+            if (ELEMENT(indexer, out content))
             {
+                element = new Starter(content);
                 indexer.PopPosition();
 
                 if (indexer.IsComplete)
@@ -173,10 +239,11 @@ namespace CGX_Formatter
             return false;
         }
 
-        public bool ELEMENT(TokenIndexer indexer)
+        public bool ELEMENT(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
             indexer.SavePosition();
-            if (BLOCK(indexer))
+            if (BLOCK(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -184,7 +251,7 @@ namespace CGX_Formatter
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (KEY_VALUE(indexer))
+            if (KEY_VALUE(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -192,7 +259,7 @@ namespace CGX_Formatter
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (PRIMITIVE_TYPE(indexer))
+            if (PRIMITIVE_TYPE(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -203,19 +270,25 @@ namespace CGX_Formatter
             return false;
         }
 
-        public bool KEY_VALUE(TokenIndexer indexer)
+        public bool KEY_VALUE(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
+            IElementCGX name;
+            IElementCGX block;
+            IElementCGX value;
             indexer.SavePosition();
-            if (STRING(indexer) && indexer.Check("assignment") && BLOCK(indexer))
+            if (STRING(indexer, out name) && indexer.Check("assignment") && BLOCK(indexer, out block))
             {
+                element = new KeyValue(name, block);
                 indexer.PopPosition();
                 return true;
             }
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (STRING(indexer) && indexer.Check("assignment") && PRIMITIVE_TYPE(indexer))
+            if (STRING(indexer, out name) && indexer.Check("assignment") && PRIMITIVE_TYPE(indexer, out value))
             {
+                element = new KeyValue(name, new KeyValuePrimitiveType(value.ToString(0)));
                 indexer.PopPosition();
                 return true;
             }
@@ -226,11 +299,14 @@ namespace CGX_Formatter
 
 
 
-        public bool BLOCK(TokenIndexer indexer)
+        public bool BLOCK(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
+            IEnumerable<IElementCGX> sq;
             indexer.SavePosition();
-            if (indexer.Check("lp") && SEQUENCE(indexer) && indexer.Check("rp"))
+            if (indexer.Check("lp") && SEQUENCE(indexer, out sq) && indexer.Check("rp"))
             {
+                element = new Block(sq);
                 indexer.PopPosition();
                 return true;
             }
@@ -238,33 +314,40 @@ namespace CGX_Formatter
             return false;
         }
 
-        public bool SEQUENCE(TokenIndexer indexer)
+        public bool SEQUENCE(TokenIndexer indexer, out IEnumerable<IElementCGX> sq)
         {
-
+            sq = null;
+            IEnumerable<IElementCGX> latter;
+            IElementCGX element;
             indexer.SavePosition();
-            if (ELEMENT(indexer) && indexer.Check("separator") && SEQUENCE(indexer))
+            if (ELEMENT(indexer, out element) && indexer.Check("separator") && SEQUENCE(indexer, out latter))
             {
+                List<IElementCGX> tmp = new List<IElementCGX>();
+                tmp.Add(element);
+                tmp.AddRange(latter);
+                sq = tmp;
                 indexer.PopPosition();
                 return true;
             }
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (ELEMENT(indexer))
+            if (ELEMENT(indexer, out element))
             {
+                List<IElementCGX> tmp = new List<IElementCGX>();
+                tmp.Add(element);
+                sq = tmp;
                 indexer.PopPosition();
                 return true;
             }
             indexer.RestorePosition();
-
-
             return true;
         }
 
-        public bool PRIMITIVE_TYPE(TokenIndexer indexer)
+        public bool PRIMITIVE_TYPE(TokenIndexer indexer, out IElementCGX element)
         {
             indexer.SavePosition();
-            if (NUMBER(indexer))
+            if (NUMBER(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -272,7 +355,7 @@ namespace CGX_Formatter
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (BOOLEAN(indexer))
+            if (BOOLEAN(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -280,7 +363,7 @@ namespace CGX_Formatter
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (STRING(indexer))
+            if (STRING(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -288,7 +371,7 @@ namespace CGX_Formatter
             indexer.RestorePosition();
 
             indexer.SavePosition();
-            if (NULL(indexer))
+            if (NULL(indexer, out element))
             {
                 indexer.PopPosition();
                 return true;
@@ -298,40 +381,48 @@ namespace CGX_Formatter
             return false;
         }
 
-        public bool NUMBER(TokenIndexer indexer)
+        public bool NUMBER(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
             bool result = indexer.Check("number");
             if (true == result)
             {
+                element = new PrimitiveType(indexer.GetTokenContent);
                 return true;
             }
             return result;
         }
-        public bool BOOLEAN(TokenIndexer indexer)
+        public bool BOOLEAN(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
             bool result = indexer.Check("boolean");
             if (true == result)
             {
+                element = new PrimitiveType(indexer.GetTokenContent);
                 return true;
             }
             return result;
         }
 
-        public bool STRING(TokenIndexer indexer)
+        public bool STRING(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
             bool result = indexer.Check("str");
             if (true == result)
             {
+                element = new PrimitiveType(indexer.GetTokenContent);
                 return true;
             }
             return result;
         }
 
-        public bool NULL(TokenIndexer indexer)
+        public bool NULL(TokenIndexer indexer, out IElementCGX element)
         {
+            element = null;
             bool result = indexer.Check("null");
             if (true == result)
             {
+                element = new PrimitiveType(indexer.GetTokenContent);
                 return true;
             }
             return result;
@@ -339,11 +430,26 @@ namespace CGX_Formatter
 
     }
 
-    internal class Program
+
+    /**
+     * Auto-generated code below aims at helping you parse
+     * the standard input according to the problem statement.
+     **/
+    class Solution
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            int N = int.Parse(Console.ReadLine());
+            List<string> input = new List<string>();
+            for (int i = 0; i < N; i++)
+            {
+                input.Add(Console.ReadLine());
+            }
+
+            Parser parser = new Parser();
+            var result = parser.Parse(String.Join("",input));
+            var formation = result.ToString(0);
+            Console.WriteLine(formation);
         }
     }
 }
