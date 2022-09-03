@@ -83,6 +83,52 @@ namespace CGX_Formatter
 
     }
 
+
+    public interface IElementCGX
+    {
+        public string ToString(int offset);
+    }
+
+    public class Block : IElementCGX
+    {
+        IEnumerable<IElementCGX> _elements;
+        public Block(IEnumerable<IElementCGX> elements)
+        {
+            _elements= elements;
+        }
+        public string ToString(int offset)
+        {
+            throw new NotImplementedException();
+        }
+    }
+    public class PrimitiveType : IElementCGX
+    {
+        Token _token;
+        public PrimitiveType(Token token)
+        {
+            _token = token;
+        }
+        public string ToString(int offset)
+        {
+            return _token.Content;
+        }
+    }
+    public class KeyValue : IElementCGX
+    {
+        IElementCGX _name;
+        IElementCGX _value;
+
+        public KeyValue(IElementCGX name, IElementCGX value)
+        {
+            _name = name;
+            _value = value;
+        }
+        public string ToString(int offset)
+        {
+            return _name.ToString(offset) + "=" + _value.ToString(offset);
+        }
+    }
+
     public class Parser
     {
         // the implementation of order of gramar expansion is important

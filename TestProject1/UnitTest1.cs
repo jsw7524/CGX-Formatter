@@ -120,9 +120,20 @@ true
             Assert.AreEqual(result, true);
         }
 
+//        [TestMethod]
+//        public void TestMethod11()
+//        {
+//            Parser parser = new Parser();
+//            bool result = parser.Parse(@"
+//((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+//0
+//))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+//");
+//            Assert.AreEqual(result, true);
+//        }
 
         [TestMethod]
-        public void TestMethod11()
+        public void TestMethod12()
         {
             Parser parser = new Parser();
             bool result = parser.Parse("(1=1)");
