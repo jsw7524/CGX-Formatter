@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CGX Formatter", "CGX Formatter\CGX Formatter.csproj", "{2B162991-384F-447D-92AB-D6E8E2B66E81}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{795C9483-FF4C-4037-9F9E-358B79D4B6EA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2B162991-384F-447D-92AB-D6E8E2B66E81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B162991-384F-447D-92AB-D6E8E2B66E81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B162991-384F-447D-92AB-D6E8E2B66E81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B162991-384F-447D-92AB-D6E8E2B66E81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{795C9483-FF4C-4037-9F9E-358B79D4B6EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{795C9483-FF4C-4037-9F9E-358B79D4B6EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{795C9483-FF4C-4037-9F9E-358B79D4B6EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{795C9483-FF4C-4037-9F9E-358B79D4B6EA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E993FD4B-54BD-4A83-B70B-ACCDE0643745}
+	EndGlobalSection
+EndGlobal
