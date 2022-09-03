@@ -16,7 +16,7 @@ namespace CGX_Formatter
     {
         public IEnumerable<Token> GetTokens(string source)
         {
-            Regex regex = new Regex(@"(?<assignment>=)|(?<separator>;)|(?<null>null)|(?<boolean>false|true)|(?<lp>\()|(?<rp>\))|(?<number>-?\d+)|(?<str>'[\w \(\)=;\t]+')");
+            Regex regex = new Regex(@"(?<assignment>=)|(?<separator>;)|(?<null>null)|(?<boolean>false|true)|(?<lp>\()|(?<rp>\))|(?<number>-?\d+)|(?<str>'[^']*')");
             List<Token> tmp = new List<Token>();
             foreach (Match m in regex.Matches(source))
             {
