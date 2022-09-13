@@ -193,12 +193,12 @@ namespace CGX_Formatter
 
     public class Parser
     {
-        // the implementation of order of gramar expansion is important
+        // The new grammar hugely improve speed and efficiency
 
         // Start -> ELEMENT
         // ELEMENT -> BLOCK | PRIMITIVE_TYPE | KEY_VALUE
-        // BLOCK -> ( SEQUENCE )
-        // SEQUENCE -> ELEMENT | ELEMENT;SEQUENCE | EMPTY
+        // BLOCK -> ( ELEMENT SEQUENCE ) | ()
+        // SEQUENCE -> ; ELEMENT SEQUENCE | EMPTY
         // PRIMITIVE_TYPE -> NUMBER | BOOLEAN | STRING | NULL
         // KEY_VALUE -> STRING = BLOCK | STRING = PRIMITIVE_TYPE
 
@@ -303,39 +303,43 @@ namespace CGX_Formatter
         {
             element = null;
             IEnumerable<IElementCGX> sq;
+            IElementCGX elm;
             indexer.SavePosition();
-            if (indexer.Check("lp") && SEQUENCE(indexer, out sq) && indexer.Check("rp"))
+            if (indexer.Check("lp") && ELEMENT(indexer, out elm)  && SEQUENCE(indexer, out sq) && indexer.Check("rp"))
             {
-                element = new Block(sq);
+                var tmp = new List<IElementCGX>();
+                tmp.Add(elm);
+                tmp.AddRange(sq);
+                element = new Block(tmp);
                 indexer.PopPosition();
                 return true;
             }
             indexer.RestorePosition();
+            ///////////////////////////////////////
+            indexer.SavePosition();
+            if (indexer.Check("lp") && indexer.Check("rp"))
+            {
+                element = new Block(new List<IElementCGX>());
+                indexer.PopPosition();
+                return true;
+            }
+            indexer.RestorePosition();
+
+
             return false;
         }
 
         public bool SEQUENCE(TokenIndexer indexer, out IEnumerable<IElementCGX> sq)
         {
-            sq = null;
+            sq = new List<IElementCGX>();
             IEnumerable<IElementCGX> latter;
             IElementCGX element;
             indexer.SavePosition();
-            if (ELEMENT(indexer, out element) && indexer.Check("separator") && SEQUENCE(indexer, out latter))
+            if (indexer.Check("separator") && ELEMENT(indexer, out element) &&  SEQUENCE(indexer, out latter))
             {
                 List<IElementCGX> tmp = new List<IElementCGX>();
                 tmp.Add(element);
                 tmp.AddRange(latter);
-                sq = tmp;
-                indexer.PopPosition();
-                return true;
-            }
-            indexer.RestorePosition();
-
-            indexer.SavePosition();
-            if (ELEMENT(indexer, out element))
-            {
-                List<IElementCGX> tmp = new List<IElementCGX>();
-                tmp.Add(element);
                 sq = tmp;
                 indexer.PopPosition();
                 return true;
